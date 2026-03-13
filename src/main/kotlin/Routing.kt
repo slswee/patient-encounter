@@ -1,5 +1,6 @@
 package com.sallyli
 
+import com.sallyli.repository.AuditRepository
 import com.sallyli.routes.auditRoutes
 import com.sallyli.routes.authRoutes
 import com.sallyli.routes.encounterRoutes
@@ -14,10 +15,11 @@ fun Application.configureRouting(
     validKeys: Map<String, String>,
     roles: Map<String, String>,
     jwtConfig: JwtConfig,
-    denylist: TokenDenylist
+    denylist: TokenDenylist,
+    auditRepo: AuditRepository
 ) {
     routing {
-        authRoutes(validKeys, roles, jwtConfig, denylist)
+        authRoutes(validKeys, roles, jwtConfig, denylist, auditRepo)
         encounterRoutes(service)
         auditRoutes(service)
     }

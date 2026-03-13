@@ -95,6 +95,71 @@ class AuthRoutesTest : BaseRouteTest() {
         }.status)
     }
 
+    // ── Auth failure audit logging ────────────────────────────────────────────
+
+    private suspend fun ApplicationTestBuilder.authFailureLogs(): JsonArray {
+        val adminToken = getAdminToken()
+        val logs = Json.decodeFromString<JsonArray>(
+            client.get("/audit/encounters") { header("Authorization", "Bearer $adminToken") }.bodyAsText()
+        )
+        return JsonArray(logs.filter { it.jsonObject["action"]?.jsonPrimitive?.content == "AUTH_FAILURE" })
+    }
+
+    @Test
+    fun testNoCredentialsWritesAuditLog() = testApplication {
+        setup()
+        client.get("/encounters/any")   // no Authorization header
+
+        val failures = authFailureLogs()
+        assertEquals(1, failures.size)
+        assertEquals("NO_CREDENTIALS", failures[0].jsonObject["reason"]!!.jsonPrimitive.content)
+        assertEquals("unknown", failures[0].jsonObject["accessedBy"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun testInvalidTokenWritesAuditLog() = testApplication {
+        setup()
+        client.get("/encounters/any") { header("Authorization", "Bearer not-a-real-jwt") }
+
+        val failures = authFailureLogs()
+        assertEquals(1, failures.size)
+        assertEquals("INVALID_TOKEN", failures[0].jsonObject["reason"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun testRevokedTokenWritesAuditLog() = testApplication {
+        setup()
+        val token = getToken()
+        client.post("/oauth/revoke") { header("Authorization", "Bearer $token") }
+        client.get("/encounters/any") { header("Authorization", "Bearer $token") }
+
+        val failures = authFailureLogs()
+        assertEquals(1, failures.size)
+        assertEquals("INVALID_TOKEN", failures[0].jsonObject["reason"]!!.jsonPrimitive.content)
+        assertEquals("provider-001", failures[0].jsonObject["accessedBy"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun testInvalidClientWritesAuditLog() = testApplication {
+        setup()
+        client.post("/oauth/token") {
+            header("Content-Type", "application/x-www-form-urlencoded")
+            setBody("client_id=provider-001&client_secret=wrong-secret&grant_type=client_credentials")
+        }
+
+        val failures = authFailureLogs()
+        assertEquals(1, failures.size)
+        assertEquals("INVALID_CLIENT", failures[0].jsonObject["reason"]!!.jsonPrimitive.content)
+        assertEquals("provider-001", failures[0].jsonObject["accessedBy"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun testSuccessfulAuthDoesNotWriteFailureLog() = testApplication {
+        setup()
+        getToken()  // valid token exchange
+        assertEquals(0, authFailureLogs().size)
+    }
+
     @Test
     fun testRevokingOneTokenDoesNotAffectOthers() = testApplication {
         setup()

@@ -1,5 +1,7 @@
 package com.sallyli.routes
 
+import com.sallyli.model.AuditLog
+import com.sallyli.repository.AuditRepository
 import com.sallyli.security.JwtConfig
 import com.sallyli.security.TokenDenylist
 import io.ktor.http.*
@@ -9,6 +11,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
+import java.time.Instant
+import java.util.UUID
 
 @Serializable
 data class TokenResponse(
@@ -21,7 +25,8 @@ fun Route.authRoutes(
     validKeys: Map<String, String>,
     roles: Map<String, String>,
     jwtConfig: JwtConfig,
-    denylist: TokenDenylist
+    denylist: TokenDenylist,
+    auditRepo: AuditRepository
 ) {
     post("/oauth/token") {
         val params = call.receiveParameters()
@@ -35,6 +40,17 @@ fun Route.authRoutes(
         }
 
         if (clientSecret == null || clientId == null || validKeys[clientSecret] != clientId) {
+            auditRepo.save(
+                AuditLog(
+                    auditId = UUID.randomUUID().toString(),
+                    action = "AUTH_FAILURE",
+                    encounterId = null,
+                    accessedBy = clientId ?: "unknown",
+                    accessedAt = Instant.now().toString(),
+                    ipAddress = call.request.local.remoteAddress,
+                    reason = "INVALID_CLIENT"
+                )
+            )
             call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "invalid_client"))
             return@post
         }

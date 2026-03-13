@@ -28,10 +28,10 @@ fun Application.module() {
     val service = EncounterService(encounterRepo, auditRepo)
 
     configureSerialization()
-    configureSecurity(jwtConfig, denylist)
+    configureSecurity(jwtConfig, denylist, auditRepo)
     configureStatusPages()
     configureValidation()
-    configureRouting(service, validKeys, roles, jwtConfig, denylist)
+    configureRouting(service, validKeys, roles, jwtConfig, denylist, auditRepo)
 }
 
 fun Application.configureValidation() {
