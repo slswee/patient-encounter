@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.ktor)
     alias(libs.plugins.kotlin.plugin.serialization)
+    jacoco
 }
 
 group = "com.sallyli"
@@ -13,6 +14,12 @@ application {
 
 kotlin {
     jvmToolchain(21)
+}
+
+tasks.jacocoTestReport {
+    reports {
+        xml.required = true
+    }
 }
 
 dependencies {

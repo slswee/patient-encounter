@@ -66,7 +66,14 @@ The `jti` claim (UUID) is included in every token to support revocation. `TokenD
 
 ### PHI compliance
 
-`PhiRedactingConverter` (Logback `ClassicConverter`, registered as `%phi_msg` in `logback.xml`) redacts `patientId` values in both JSON form (`"patientId": "..."`) and query-param form (`patientId=...`) before any log line is written. The service layer also avoids logging `patientId` directly — the converter is a safety net, not the primary control.
+PHI redaction is handled by two Logback converters registered in `logback.xml`:
+
+- `PhiRedactingConverter` (`%phi_msg`) — extends `ClassicConverter`, redacts `patientId` in both JSON form (`"patientId": "..."`) and query-param form (`patientId=...`) from the formatted log message.
+- `PhiRedactingThrowableConverter` (`%phi_ex`) — extends `ExtendedThrowableProxyConverter`, applies the same redaction logic to the full exception block (message + cause chain + stack trace). This closes the gap where `logger.error("msg", exception)` could echo PHI embedded in exception messages (e.g. `JsonDecodingException` echoing the request body).
+
+The log pattern in `logback.xml` uses `%phi_msg%n%phi_ex%nopex`: `%phi_ex` outputs the redacted exception block, and `%nopex` suppresses Logback's default (unredacted) exception appending that would otherwise follow.
+
+The `redact()` method on `PhiRedactingConverter` is public so `PhiRedactingThrowableConverter` can delegate to it without duplicating the regex patterns. The service layer also avoids logging `patientId` directly — the converters are a safety net, not the primary control.
 
 ### Audit trail
 
@@ -95,16 +102,21 @@ Error shape: `{ "message": "...", "details": ["..."] }`
 
 ## Test Coverage
 
-54 tests across 6 files, mirroring the source layout under `src/test/kotlin/com/sallyli/`:
+58 tests across 7 files. Regenerate with `./gradlew test jacocoTestReport`; HTML report at `build/reports/jacoco/test/html/index.html`.
 
-| File | Type | Count | What it covers |
+**Overall: 329/337 lines (98%) · 94/112 methods (84%) · 1892/2016 instructions (94%)**
+
+Per-package breakdown (JaCoCo aggregates all tests together):
+
+| Source package | Lines | Methods | Test file(s) |
 |---|---|---|---|
-| `routes/AuthRoutesTest` | Integration (full HTTP) | 13 | Token endpoint, revocation, auth failure audit logging |
-| `routes/EncounterRoutesTest` | Integration (full HTTP) | 11 | CRUD status codes, auth guards, RBAC HTTP responses |
-| `service/EncounterServiceTest` | Unit (no HTTP) | 13 | RBAC enforcement, audit writes, NotFoundException/ForbiddenException |
-| `security/PhiRedactorTest` | Unit | 5 | JSON and query-param PHI redaction, non-PHI fields untouched |
-| `security/TokenDenylistTest` | Unit | 5 | Revocation, unknown tokens, lazy expiry cleanup |
-| `repository/EncounterRepositoryTest` | Unit | 7 | Save/find, date/provider/patient filters |
+| `routes` | 81/81 (100%) | 15/18 (83%) | `AuthRoutesTest` (13), `EncounterRoutesTest` (11) |
+| `service` | 47/47 (100%) | 7/7 (100%) | `EncounterServiceTest` (13) |
+| `security` | 78/78 (100%) | 19/21 (90%) | `PhiRedactorTest` (5), `PhiRedactingThrowableConverterTest` (4), `TokenDenylistTest` (5) |
+| `repository` | 25/26 (96%) | 9/11 (82%) | `EncounterRepositoryTest` (7) |
+| `plugins` | 14/17 (82%) | 5/6 (83%) | via route integration tests |
+| `model` | 40/40 (100%) | 30/39 (77%) | via all tests |
+| `com.sallyli` (root) | 44/48 (92%) | 9/10 (90%) | via route integration tests |
 
 Route tests use `testApplication { setup() }` (full Ktor stack). Unit tests instantiate classes directly — no HTTP overhead, faster failure attribution.
 

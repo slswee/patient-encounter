@@ -1,9 +1,10 @@
 <configuration>
     <conversionRule conversionWord="phi_msg" converterClass="com.sallyli.security.PhiRedactingConverter"/>
+    <conversionRule conversionWord="phi_ex" converterClass="com.sallyli.security.PhiRedactingThrowableConverter"/>
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %phi_msg%n</pattern>
+            <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %phi_msg%n%phi_ex%nopex</pattern>
         </encoder>
     </appender>
     <root level="INFO">
