@@ -30,11 +30,12 @@ fun Route.encounterRoutes(service: EncounterService) {
 
         get("/encounters") {
             val caller = call.callerContext()
+            val ip = call.request.local.remoteAddress
             val fromDate = call.request.queryParameters["fromDate"]
             val toDate = call.request.queryParameters["toDate"]
             val providerId = call.request.queryParameters["providerId"]
             val patientId = call.request.queryParameters["patientId"]
-            val encounters = service.listEncounters(fromDate, toDate, providerId, patientId, caller)
+            val encounters = service.listEncounters(fromDate, toDate, providerId, patientId, caller, ip)
             call.respond(encounters)
         }
     }

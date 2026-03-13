@@ -160,4 +160,51 @@ class EncounterRoutesTest : BaseRouteTest() {
         assertTrue(actions.contains("CREATE"))
         assertTrue(actions.contains("READ"))
     }
+
+    @Test
+    fun testListEncountersWritesAuditEntry() = testApplication {
+        setup()
+        val token = getToken()
+        val encounterId = createEncounter(token, provider1Body)
+
+        client.get("/encounters") { header("Authorization", "Bearer $token") }
+
+        val logs = Json.decodeFromString<JsonArray>(
+            client.get("/audit/encounters") { header("Authorization", "Bearer $token") }.bodyAsText()
+        )
+        val listEntries = logs.filter { it.jsonObject["action"]!!.jsonPrimitive.content == "LIST" }
+        assertEquals(1, listEntries.size)
+        assertEquals(encounterId, listEntries[0].jsonObject["encounterId"]!!.jsonPrimitive.content)
+        assertEquals("provider-001", listEntries[0].jsonObject["accessedBy"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun testListEncountersWritesOneEntryPerResult() = testApplication {
+        setup()
+        val token = getToken()
+        createEncounter(token, provider1Body)
+        createEncounter(token, provider1Body)
+
+        client.get("/encounters") { header("Authorization", "Bearer $token") }
+
+        val logs = Json.decodeFromString<JsonArray>(
+            client.get("/audit/encounters") { header("Authorization", "Bearer $token") }.bodyAsText()
+        )
+        val listEntries = logs.filter { it.jsonObject["action"]!!.jsonPrimitive.content == "LIST" }
+        assertEquals(2, listEntries.size)
+    }
+
+    @Test
+    fun testListEncountersWithNoResultsWritesNoAuditEntry() = testApplication {
+        setup()
+        val token = getToken()  // provider-001, no encounters created
+
+        client.get("/encounters") { header("Authorization", "Bearer $token") }
+
+        val logs = Json.decodeFromString<JsonArray>(
+            client.get("/audit/encounters") { header("Authorization", "Bearer $token") }.bodyAsText()
+        )
+        val listEntries = logs.filter { it.jsonObject["action"]!!.jsonPrimitive.content == "LIST" }
+        assertEquals(0, listEntries.size)
+    }
 }

@@ -113,7 +113,7 @@ class EncounterServiceTest {
         service.createEncounter(requestFor("provider-001"), provider1, null)
         service.createEncounter(requestFor("provider-002"), provider2, null)
 
-        val list = service.listEncounters(null, null, null, null, provider1)
+        val list = service.listEncounters(null, null, null, null, provider1, null)
         assertEquals(1, list.size)
         assertEquals("provider-001", list[0].providerId)
     }
@@ -124,7 +124,7 @@ class EncounterServiceTest {
         service.createEncounter(requestFor("provider-002"), provider2, null)
 
         // provider-001 tries to pass provider-002's id as filter — should still only see own
-        val list = service.listEncounters(null, null, "provider-002", null, provider1)
+        val list = service.listEncounters(null, null, "provider-002", null, provider1, null)
         assertEquals(1, list.size)
         assertEquals("provider-001", list[0].providerId)
     }
@@ -134,7 +134,7 @@ class EncounterServiceTest {
         service.createEncounter(requestFor("provider-001"), provider1, null)
         service.createEncounter(requestFor("provider-002"), provider2, null)
 
-        assertEquals(2, service.listEncounters(null, null, null, null, admin).size)
+        assertEquals(2, service.listEncounters(null, null, null, null, admin, null).size)
     }
 
     @Test
@@ -142,9 +142,46 @@ class EncounterServiceTest {
         service.createEncounter(requestFor("provider-001"), provider1, null)
         service.createEncounter(requestFor("provider-002"), provider2, null)
 
-        val list = service.listEncounters(null, null, "provider-001", null, admin)
+        val list = service.listEncounters(null, null, "provider-001", null, admin, null)
         assertEquals(1, list.size)
         assertEquals("provider-001", list[0].providerId)
+    }
+
+    @Test
+    fun testListWritesOneAuditEntryPerEncounter() {
+        service.createEncounter(requestFor("provider-001"), provider1, null)
+        service.createEncounter(requestFor("provider-001"), provider1, null)
+        auditRepo.findAll().let { assertEquals(2, it.size) } // only CREATE entries so far
+
+        service.listEncounters(null, null, null, null, provider1, "10.0.0.1")
+
+        val logs = auditRepo.findAll()
+        val listEntries = logs.filter { it.action == "LIST" }
+        assertEquals(2, listEntries.size)
+        listEntries.forEach { entry ->
+            assertEquals("provider-001", entry.accessedBy)
+            assertEquals("10.0.0.1", entry.ipAddress)
+        }
+    }
+
+    @Test
+    fun testListWritesNoAuditEntryWhenResultIsEmpty() {
+        // No encounters exist — nothing was disclosed, nothing to audit
+        service.listEncounters(null, null, null, null, provider1, null)
+
+        assertEquals(0, auditRepo.findAll().filter { it.action == "LIST" }.size)
+    }
+
+    @Test
+    fun testListAuditEntriesLinkToCorrectEncounterIds() {
+        val e1 = service.createEncounter(requestFor("provider-001"), provider1, null)
+        val e2 = service.createEncounter(requestFor("provider-001"), provider1, null)
+
+        service.listEncounters(null, null, null, null, provider1, null)
+
+        val listEntries = auditRepo.findAll().filter { it.action == "LIST" }
+        val auditedIds = listEntries.map { it.encounterId }.toSet()
+        assertEquals(setOf(e1.encounterId, e2.encounterId), auditedIds)
     }
 
     // ── getAuditLogs ──────────────────────────────────────────────────────────

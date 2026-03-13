@@ -80,6 +80,42 @@ class EncounterRepositoryTest {
         assertEquals("2026-01-01T00:00:00Z", results[0].encounterDate)
     }
 
+    // ── Date-only filter params (the previously broken case) ──────────────────
+
+    @Test
+    fun testDateOnlyToDateIncludesEncountersFromThatDay() {
+        // "2026-03-13" as toDate must include a timestamp stored encounter on that day
+        repo.save(encounter(encounterDate = "2026-03-13T10:00:00Z"))
+        repo.save(encounter(encounterDate = "2026-03-14T08:00:00Z"))
+
+        val results = repo.findAll(toDate = "2026-03-13")
+        assertEquals(1, results.size)
+        assertEquals("2026-03-13T10:00:00Z", results[0].encounterDate)
+    }
+
+    @Test
+    fun testDateOnlyFromDateIncludesEncountersFromThatDay() {
+        repo.save(encounter(encounterDate = "2026-03-12T23:59:59Z"))
+        repo.save(encounter(encounterDate = "2026-03-13T00:00:00Z"))
+
+        val results = repo.findAll(fromDate = "2026-03-13")
+        assertEquals(1, results.size)
+        assertEquals("2026-03-13T00:00:00Z", results[0].encounterDate)
+    }
+
+    @Test
+    fun testDateOnlyRangeIncludesFullDay() {
+        repo.save(encounter(encounterDate = "2026-03-12T23:59:59Z"))
+        repo.save(encounter(encounterDate = "2026-03-13T00:00:00Z"))
+        repo.save(encounter(encounterDate = "2026-03-13T12:00:00Z"))
+        repo.save(encounter(encounterDate = "2026-03-13T23:59:59Z"))
+        repo.save(encounter(encounterDate = "2026-03-14T00:00:00Z"))
+
+        val results = repo.findAll(fromDate = "2026-03-13", toDate = "2026-03-13")
+        assertEquals(3, results.size)
+        results.forEach { assertEquals("2026-03-13", it.encounterDate.take(10)) }
+    }
+
     @Test
     fun testFindAllWithNoFiltersReturnsAll() {
         repo.save(encounter())

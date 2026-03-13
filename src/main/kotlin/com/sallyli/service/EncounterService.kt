@@ -82,12 +82,30 @@ class EncounterService(
         toDate: String?,
         providerId: String?,
         patientId: String?,
-        caller: CallerContext
+        caller: CallerContext,
+        ip: String?
     ): List<Encounter> {
         // Non-admin callers are silently restricted to their own encounters
         // regardless of any providerId filter they supply
         val effectiveProviderId = if (caller.isAdmin) providerId else caller.identity
-        return encounters.findAll(fromDate, toDate, effectiveProviderId, patientId)
+        val results = encounters.findAll(fromDate, toDate, effectiveProviderId, patientId)
+
+        // Write one audit entry per disclosed encounter so compliance queries can
+        // answer "who accessed patient X's records?" at the individual record level
+        val now = Instant.now().toString()
+        results.forEach { encounter ->
+            audit.save(
+                AuditLog(
+                    auditId = UUID.randomUUID().toString(),
+                    action = "LIST",
+                    encounterId = encounter.encounterId,
+                    accessedBy = caller.identity,
+                    accessedAt = now,
+                    ipAddress = ip
+                )
+            )
+        }
+        return results
     }
 
     fun getAuditLogs(fromDate: String?, toDate: String?, caller: CallerContext): List<AuditLog> {

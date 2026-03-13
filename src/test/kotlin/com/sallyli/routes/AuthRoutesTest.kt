@@ -160,6 +160,36 @@ class AuthRoutesTest : BaseRouteTest() {
         assertEquals(0, authFailureLogs().size)
     }
 
+    // ── Token revocation audit logging ────────────────────────────────────────
+
+    private suspend fun ApplicationTestBuilder.revokeLogs(): JsonArray {
+        val adminToken = getAdminToken()
+        val logs = Json.decodeFromString<JsonArray>(
+            client.get("/audit/encounters") { header("Authorization", "Bearer $adminToken") }.bodyAsText()
+        )
+        return JsonArray(logs.filter { it.jsonObject["action"]?.jsonPrimitive?.content == "REVOKE" })
+    }
+
+    @Test
+    fun testRevokeWritesAuditLog() = testApplication {
+        setup()
+        val token = getToken()
+        client.post("/oauth/revoke") { header("Authorization", "Bearer $token") }
+
+        val logs = revokeLogs()
+        assertEquals(1, logs.size)
+        assertEquals("REVOKE", logs[0].jsonObject["action"]!!.jsonPrimitive.content)
+        assertEquals("provider-001", logs[0].jsonObject["accessedBy"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun testFailedRevokeDoesNotWriteAuditLog() = testApplication {
+        setup()
+        client.post("/oauth/revoke") { header("Authorization", "Bearer not-a-valid-jwt") }
+
+        assertEquals(0, revokeLogs().size)
+    }
+
     @Test
     fun testRevokingOneTokenDoesNotAffectOthers() = testApplication {
         setup()

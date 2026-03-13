@@ -71,6 +71,16 @@ fun Route.authRoutes(
                 jti = payload.id,
                 expiresAtMs = payload.expiresAt.time
             )
+            auditRepo.save(
+                AuditLog(
+                    auditId = UUID.randomUUID().toString(),
+                    action = "REVOKE",
+                    encounterId = null,
+                    accessedBy = payload.subject,
+                    accessedAt = Instant.now().toString(),
+                    ipAddress = call.request.local.remoteAddress
+                )
+            )
             call.respond(HttpStatusCode.OK, mapOf("message" to "Token revoked"))
         }
     }
