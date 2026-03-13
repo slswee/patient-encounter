@@ -23,6 +23,7 @@ dependencies {
     implementation(libs.logback.classic)
     implementation(libs.ktor.server.config.yaml)
     implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.auth.jwt)
     implementation(libs.ktor.server.request.validation)
     implementation(libs.ktor.server.status.pages)
     testImplementation(libs.ktor.server.test.host)

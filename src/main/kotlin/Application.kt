@@ -4,7 +4,9 @@ import com.sallyli.model.CreateEncounterRequest
 import com.sallyli.plugins.configureStatusPages
 import com.sallyli.repository.InMemoryAuditRepository
 import com.sallyli.repository.InMemoryEncounterRepository
+import com.sallyli.security.JwtConfig
 import com.sallyli.security.configureSecurity
+import com.sallyli.security.parseApiKeys
 import com.sallyli.service.EncounterService
 import io.ktor.server.application.*
 import io.ktor.server.plugins.requestvalidation.*
@@ -14,15 +16,19 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
+    val validKeys = parseApiKeys(environment.config.propertyOrNull("api.keys")?.getString() ?: "")
+    val jwtSecret = environment.config.propertyOrNull("jwt.secret")?.getString() ?: ""
+    val jwtConfig = JwtConfig(jwtSecret)
+
     val encounterRepo = InMemoryEncounterRepository()
     val auditRepo = InMemoryAuditRepository()
     val service = EncounterService(encounterRepo, auditRepo)
 
     configureSerialization()
-    configureSecurity()
+    configureSecurity(jwtConfig)
     configureStatusPages()
     configureValidation()
-    configureRouting(service)
+    configureRouting(service, validKeys, jwtConfig)
 }
 
 fun Application.configureValidation() {

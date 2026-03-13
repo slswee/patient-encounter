@@ -7,3 +7,6 @@ ktor:
 
 api:
     keys: ${API_KEYS:""}
+
+jwt:
+    secret: ${JWT_SECRET:"dev-secret-change-in-production"}
