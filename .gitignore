@@ -38,3 +38,6 @@ out/
 
 ### Kotlin ###
 .kotlin/
+
+### Personal notes ###
+docs/

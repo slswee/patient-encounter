@@ -40,7 +40,7 @@ fun Route.encounterRoutes(service: EncounterService) {
     }
 }
 
-private fun io.ktor.server.application.ApplicationCall.callerContext(): CallerContext {
+internal fun io.ktor.server.application.ApplicationCall.callerContext(): CallerContext {
     val payload = principal<JWTPrincipal>()!!.payload
     return CallerContext(
         identity = payload.subject,

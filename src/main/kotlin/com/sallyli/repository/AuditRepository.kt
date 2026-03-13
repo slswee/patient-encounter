@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 interface AuditRepository {
     fun save(log: AuditLog): AuditLog
-    fun findAll(fromDate: String? = null, toDate: String? = null): List<AuditLog>
+    fun findAll(fromDate: String? = null, toDate: String? = null, accessedBy: String? = null): List<AuditLog>
 }
 
 class InMemoryAuditRepository : AuditRepository {
@@ -16,10 +16,11 @@ class InMemoryAuditRepository : AuditRepository {
         return log
     }
 
-    override fun findAll(fromDate: String?, toDate: String?): List<AuditLog> {
+    override fun findAll(fromDate: String?, toDate: String?, accessedBy: String?): List<AuditLog> {
         return store.values.filter { log ->
             (fromDate == null || log.accessedAt >= fromDate) &&
-            (toDate == null || log.accessedAt <= toDate)
+            (toDate == null || log.accessedAt <= toDate) &&
+            (accessedBy == null || log.accessedBy == accessedBy)
         }.sortedByDescending { it.accessedAt }
     }
 }

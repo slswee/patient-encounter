@@ -146,4 +146,35 @@ class EncounterServiceTest {
         assertEquals(1, list.size)
         assertEquals("provider-001", list[0].providerId)
     }
+
+    // ── getAuditLogs ──────────────────────────────────────────────────────────
+
+    @Test
+    fun testProviderGetsOnlyOwnAuditLogs() {
+        service.createEncounter(requestFor("provider-001"), provider1, null)
+        service.createEncounter(requestFor("provider-002"), provider2, null)
+
+        val logs = service.getAuditLogs(null, null, provider1)
+        assertEquals(1, logs.size)
+        assertEquals("provider-001", logs[0].accessedBy)
+    }
+
+    @Test
+    fun testProviderCannotSeeOtherProvidersAuditLogs() {
+        service.createEncounter(requestFor("provider-001"), provider1, null)
+        service.createEncounter(requestFor("provider-002"), provider2, null)
+
+        val logs = service.getAuditLogs(null, null, provider2)
+        assertEquals(1, logs.size)
+        assertEquals("provider-002", logs[0].accessedBy)
+    }
+
+    @Test
+    fun testAdminGetsAllAuditLogs() {
+        service.createEncounter(requestFor("provider-001"), provider1, null)
+        service.createEncounter(requestFor("provider-002"), provider2, null)
+
+        val logs = service.getAuditLogs(null, null, admin)
+        assertEquals(2, logs.size)
+    }
 }

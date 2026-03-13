@@ -90,7 +90,8 @@ class EncounterService(
         return encounters.findAll(fromDate, toDate, effectiveProviderId, patientId)
     }
 
-    fun getAuditLogs(fromDate: String?, toDate: String?): List<AuditLog> {
-        return audit.findAll(fromDate, toDate)
+    fun getAuditLogs(fromDate: String?, toDate: String?, caller: CallerContext): List<AuditLog> {
+        val effectiveAccessedBy = if (caller.isAdmin) null else caller.identity
+        return audit.findAll(fromDate, toDate, effectiveAccessedBy)
     }
 }

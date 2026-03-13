@@ -69,7 +69,7 @@ The `jti` claim (UUID) is included in every token to support revocation. `TokenD
 PHI redaction is handled by two Logback converters registered in `logback.xml`:
 
 - `PhiRedactingConverter` (`%phi_msg`) — extends `ClassicConverter`, redacts `patientId` in both JSON form (`"patientId": "..."`) and query-param form (`patientId=...`) from the formatted log message.
-- `PhiRedactingThrowableConverter` (`%phi_ex`) — extends `ExtendedThrowableProxyConverter`, applies the same redaction logic to the full exception block (message + cause chain + stack trace). This closes the gap where `logger.error("msg", exception)` could echo PHI embedded in exception messages (e.g. `JsonDecodingException` echoing the request body).
+- `PhiRedactingThrowableConverter` (`%phi_ex`) — extends `ExtendedThrowableProxyConverter`, applies the same redaction logic to the full exception block (message + cause chain + stack trace). Defence-in-depth: no current code path puts `patientId` in an exception message (`SerializationException` for an invalid enum only echoes the bad value and field path, not the full body; service exceptions use `encounterId` or static strings). The converter guards against future code inadvertently including PHI in a thrown exception.
 
 The log pattern in `logback.xml` uses `%phi_msg%n%phi_ex%nopex`: `%phi_ex` outputs the redacted exception block, and `%nopex` suppresses Logback's default (unredacted) exception appending that would otherwise follow.
 
