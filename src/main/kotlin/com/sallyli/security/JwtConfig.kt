@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
 import java.util.Date
+import java.util.UUID
 
 class JwtConfig(secret: String) {
     private val algorithm: Algorithm = Algorithm.HMAC256(secret)
@@ -17,6 +18,7 @@ class JwtConfig(secret: String) {
         .build()
 
     fun generateToken(identity: String): String = JWT.create()
+        .withJWTId(UUID.randomUUID().toString())
         .withIssuer(issuer)
         .withAudience(audience)
         .withSubject(identity)

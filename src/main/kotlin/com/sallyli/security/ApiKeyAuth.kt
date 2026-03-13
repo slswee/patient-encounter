@@ -14,13 +14,16 @@ fun parseApiKeys(raw: String): Map<String, String> =
             key to identity
         }
 
-fun Application.configureSecurity(jwtConfig: JwtConfig) {
+fun Application.configureSecurity(jwtConfig: JwtConfig, denylist: TokenDenylist) {
     install(Authentication) {
         jwt("api-key") {
             verifier(jwtConfig.verifier)
             validate { credential ->
+                val jti = credential.payload.id
                 val subject = credential.payload.subject
-                if (!subject.isNullOrBlank()) JWTPrincipal(credential.payload) else null
+                if (!subject.isNullOrBlank() && !jti.isNullOrBlank() && !denylist.isRevoked(jti)) {
+                    JWTPrincipal(credential.payload)
+                } else null
             }
             challenge { _, _ ->
                 call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Unauthorized"))

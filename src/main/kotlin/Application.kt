@@ -5,6 +5,7 @@ import com.sallyli.plugins.configureStatusPages
 import com.sallyli.repository.InMemoryAuditRepository
 import com.sallyli.repository.InMemoryEncounterRepository
 import com.sallyli.security.JwtConfig
+import com.sallyli.security.TokenDenylist
 import com.sallyli.security.configureSecurity
 import com.sallyli.security.parseApiKeys
 import com.sallyli.service.EncounterService
@@ -20,15 +21,16 @@ fun Application.module() {
     val jwtSecret = environment.config.propertyOrNull("jwt.secret")?.getString() ?: ""
     val jwtConfig = JwtConfig(jwtSecret)
 
+    val denylist = TokenDenylist()
     val encounterRepo = InMemoryEncounterRepository()
     val auditRepo = InMemoryAuditRepository()
     val service = EncounterService(encounterRepo, auditRepo)
 
     configureSerialization()
-    configureSecurity(jwtConfig)
+    configureSecurity(jwtConfig, denylist)
     configureStatusPages()
     configureValidation()
-    configureRouting(service, validKeys, jwtConfig)
+    configureRouting(service, validKeys, jwtConfig, denylist)
 }
 
 fun Application.configureValidation() {

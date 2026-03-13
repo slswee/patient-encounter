@@ -195,6 +195,64 @@ class ApplicationTest {
     }
 
     @Test
+    fun testRevokeToken() = testApplication {
+        setup()
+        val token = getToken()
+
+        // Token is valid before revocation — unknown encounter returns 404, not 401
+        assertEquals(HttpStatusCode.NotFound, client.get("/encounters/some-id") {
+            header("Authorization", "Bearer $token")
+        }.status)
+
+        // Revoke the token
+        assertEquals(HttpStatusCode.OK, client.post("/oauth/revoke") {
+            header("Authorization", "Bearer $token")
+        }.status)
+
+        // Same token is now rejected
+        assertEquals(HttpStatusCode.Unauthorized, client.get("/encounters/some-id") {
+            header("Authorization", "Bearer $token")
+        }.status)
+    }
+
+    @Test
+    fun testRevokeRequiresAuth() = testApplication {
+        setup()
+        // Revoke endpoint without a token should return 401
+        assertEquals(HttpStatusCode.Unauthorized, client.post("/oauth/revoke").status)
+    }
+
+    @Test
+    fun testRevokeWithInvalidTokenRejected() = testApplication {
+        setup()
+        assertEquals(HttpStatusCode.Unauthorized, client.post("/oauth/revoke") {
+            header("Authorization", "Bearer not-a-valid-jwt")
+        }.status)
+    }
+
+    @Test
+    fun testOtherTokensUnaffectedByRevocation() = testApplication {
+        setup()
+        val token1 = getToken(clientId = "provider-001", clientSecret = "test-api-key-provider-001")
+        val token2 = getToken(clientId = "provider-002", clientSecret = "test-api-key-provider-002")
+
+        // Revoke token1
+        assertEquals(HttpStatusCode.OK, client.post("/oauth/revoke") {
+            header("Authorization", "Bearer $token1")
+        }.status)
+
+        // token1 rejected
+        assertEquals(HttpStatusCode.Unauthorized, client.get("/encounters/some-id") {
+            header("Authorization", "Bearer $token1")
+        }.status)
+
+        // token2 still works — 404 means it passed auth, encounter just doesn't exist
+        assertEquals(HttpStatusCode.NotFound, client.get("/encounters/some-id") {
+            header("Authorization", "Bearer $token2")
+        }.status)
+    }
+
+    @Test
     fun testPhiNotInLogs() {
         val converter = PhiRedactingConverter()
 

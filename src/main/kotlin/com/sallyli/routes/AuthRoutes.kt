@@ -1,7 +1,10 @@
 package com.sallyli.routes
 
 import com.sallyli.security.JwtConfig
+import com.sallyli.security.TokenDenylist
 import io.ktor.http.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -14,7 +17,7 @@ data class TokenResponse(
     val expires_in: Long
 )
 
-fun Route.authRoutes(validKeys: Map<String, String>, jwtConfig: JwtConfig) {
+fun Route.authRoutes(validKeys: Map<String, String>, jwtConfig: JwtConfig, denylist: TokenDenylist) {
     post("/oauth/token") {
         val params = call.receiveParameters()
         val clientId = params["client_id"]
@@ -37,5 +40,16 @@ fun Route.authRoutes(validKeys: Map<String, String>, jwtConfig: JwtConfig) {
                 expires_in = jwtConfig.tokenTtlSeconds
             )
         )
+    }
+
+    authenticate("api-key") {
+        post("/oauth/revoke") {
+            val payload = call.principal<JWTPrincipal>()!!.payload
+            denylist.revoke(
+                jti = payload.id,
+                expiresAtMs = payload.expiresAt.time
+            )
+            call.respond(HttpStatusCode.OK, mapOf("message" to "Token revoked"))
+        }
     }
 }
