@@ -17,11 +17,12 @@ class JwtConfig(secret: String) {
         .withAudience(audience)
         .build()
 
-    fun generateToken(identity: String): String = JWT.create()
+    fun generateToken(identity: String, role: String): String = JWT.create()
         .withJWTId(UUID.randomUUID().toString())
         .withIssuer(issuer)
         .withAudience(audience)
         .withSubject(identity)
+        .withClaim("role", role)
         .withIssuedAt(Date())
         .withExpiresAt(Date(System.currentTimeMillis() + tokenTtlSeconds * 1000))
         .sign(algorithm)

@@ -12,11 +12,12 @@ import io.ktor.server.routing.*
 fun Application.configureRouting(
     service: EncounterService,
     validKeys: Map<String, String>,
+    roles: Map<String, String>,
     jwtConfig: JwtConfig,
     denylist: TokenDenylist
 ) {
     routing {
-        authRoutes(validKeys, jwtConfig, denylist)
+        authRoutes(validKeys, roles, jwtConfig, denylist)
         encounterRoutes(service)
         auditRoutes(service)
     }

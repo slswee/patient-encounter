@@ -18,6 +18,7 @@ fun main(args: Array<String>) {
 
 fun Application.module() {
     val validKeys = parseApiKeys(environment.config.propertyOrNull("api.keys")?.getString() ?: "")
+    val roles = parseApiKeys(environment.config.propertyOrNull("api.roles")?.getString() ?: "")
     val jwtSecret = environment.config.propertyOrNull("jwt.secret")?.getString() ?: ""
     val jwtConfig = JwtConfig(jwtSecret)
 
@@ -30,7 +31,7 @@ fun Application.module() {
     configureSecurity(jwtConfig, denylist)
     configureStatusPages()
     configureValidation()
-    configureRouting(service, validKeys, jwtConfig, denylist)
+    configureRouting(service, validKeys, roles, jwtConfig, denylist)
 }
 
 fun Application.configureValidation() {

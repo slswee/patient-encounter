@@ -17,7 +17,12 @@ data class TokenResponse(
     val expires_in: Long
 )
 
-fun Route.authRoutes(validKeys: Map<String, String>, jwtConfig: JwtConfig, denylist: TokenDenylist) {
+fun Route.authRoutes(
+    validKeys: Map<String, String>,
+    roles: Map<String, String>,
+    jwtConfig: JwtConfig,
+    denylist: TokenDenylist
+) {
     post("/oauth/token") {
         val params = call.receiveParameters()
         val clientId = params["client_id"]
@@ -34,9 +39,10 @@ fun Route.authRoutes(validKeys: Map<String, String>, jwtConfig: JwtConfig, denyl
             return@post
         }
 
+        val role = roles[clientId] ?: "provider"
         call.respond(
             TokenResponse(
-                access_token = jwtConfig.generateToken(clientId),
+                access_token = jwtConfig.generateToken(clientId, role),
                 expires_in = jwtConfig.tokenTtlSeconds
             )
         )

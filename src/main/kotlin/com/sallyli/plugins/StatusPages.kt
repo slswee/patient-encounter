@@ -1,6 +1,7 @@
 package com.sallyli.plugins
 
 import com.sallyli.model.ErrorResponse
+import com.sallyli.service.ForbiddenException
 import com.sallyli.service.NotFoundException
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -18,6 +19,9 @@ fun Application.configureStatusPages() {
         }
         exception<NotFoundException> { call, cause ->
             call.respond(HttpStatusCode.NotFound, ErrorResponse(cause.message ?: "Resource not found"))
+        }
+        exception<ForbiddenException> { call, _ ->
+            call.respond(HttpStatusCode.Forbidden, ErrorResponse("Access denied"))
         }
         exception<Throwable> { call, cause ->
             logger.error("Unexpected error", cause)
