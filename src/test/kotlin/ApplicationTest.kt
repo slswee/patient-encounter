@@ -4,6 +4,7 @@ import com.sallyli.security.PhiRedactingConverter
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.*
 import kotlin.test.Test
@@ -16,9 +17,18 @@ class ApplicationTest {
     private val validApiKey = "test-api-key-provider-001"
     private val validBody = """{"patientId":"P123","providerId":"provider-001","encounterDate":"2026-03-10T10:00:00Z","encounterType":"INITIAL_ASSESSMENT","clinicalData":{"notes":"First visit"}}"""
 
+    private fun ApplicationTestBuilder.setup() {
+        environment {
+            config = MapApplicationConfig(
+                "api.keys" to "test-api-key-provider-001:provider-001,test-api-key-provider-002:provider-002"
+            )
+        }
+        application { module() }
+    }
+
     @Test
     fun testCreateEncounterSuccess() = testApplication {
-        application { module() }
+        setup()
         val response = client.post("/encounters") {
             header("X-API-Key", validApiKey)
             header("Content-Type", "application/json")
@@ -32,7 +42,7 @@ class ApplicationTest {
 
     @Test
     fun testCreateEncounterValidationFailure() = testApplication {
-        application { module() }
+        setup()
         val response = client.post("/encounters") {
             header("X-API-Key", validApiKey)
             header("Content-Type", "application/json")
@@ -45,8 +55,7 @@ class ApplicationTest {
 
     @Test
     fun testGetEncounterFound() = testApplication {
-        application { module() }
-
+        setup()
         val createResponse = client.post("/encounters") {
             header("X-API-Key", validApiKey)
             header("Content-Type", "application/json")
@@ -65,7 +74,7 @@ class ApplicationTest {
 
     @Test
     fun testGetEncounterNotFound() = testApplication {
-        application { module() }
+        setup()
         val response = client.get("/encounters/nonexistent-id-12345") {
             header("X-API-Key", validApiKey)
         }
@@ -74,8 +83,7 @@ class ApplicationTest {
 
     @Test
     fun testAuditTrail() = testApplication {
-        application { module() }
-
+        setup()
         val createResponse = client.post("/encounters") {
             header("X-API-Key", validApiKey)
             header("Content-Type", "application/json")
@@ -102,15 +110,23 @@ class ApplicationTest {
 
     @Test
     fun testUnauthorized() = testApplication {
-        application { module() }
+        setup()
         val response = client.get("/encounters/any-id")
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 
     @Test
-    fun testListEncounters() = testApplication {
-        application { module() }
+    fun testInvalidApiKey() = testApplication {
+        setup()
+        val response = client.get("/encounters/any-id") {
+            header("X-API-Key", "not-a-real-key")
+        }
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
 
+    @Test
+    fun testListEncounters() = testApplication {
+        setup()
         client.post("/encounters") {
             header("X-API-Key", validApiKey)
             header("Content-Type", "application/json")

@@ -34,13 +34,21 @@ fun AuthenticationConfig.apiKey(name: String? = null, configure: ApiKeyAuthentic
     register(ApiKeyAuthenticationProvider(config))
 }
 
+fun parseApiKeys(raw: String): Map<String, String> =
+    raw.split(",")
+        .filter { it.contains(":") }
+        .associate { entry ->
+            val (key, identity) = entry.trim().split(":", limit = 2)
+            key to identity
+        }
+
 fun Application.configureSecurity() {
+    val keysRaw = environment.config.propertyOrNull("api.keys")?.getString() ?: ""
+    val validKeys = parseApiKeys(keysRaw)
+
     install(Authentication) {
         apiKey("api-key") {
-            validKeys = mapOf(
-                "test-api-key-provider-001" to "provider-001",
-                "test-api-key-provider-002" to "provider-002"
-            )
+            this.validKeys = validKeys
         }
     }
 }
