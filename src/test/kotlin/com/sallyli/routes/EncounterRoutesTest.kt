@@ -207,4 +207,39 @@ class EncounterRoutesTest : BaseRouteTest() {
         val listEntries = logs.filter { it.jsonObject["action"]!!.jsonPrimitive.content == "LIST" }
         assertEquals(0, listEntries.size)
     }
+
+    // ── Cache-Control headers ─────────────────────────────────────────────────
+
+    @Test
+    fun testCreateEncounterResponseHasNoCacheHeader() = testApplication {
+        setup()
+        val token = getToken()
+        val response = client.post("/encounters") {
+            header("Authorization", "Bearer $token")
+            header("Content-Type", "application/json")
+            setBody(provider1Body)
+        }
+        assertEquals("no-store", response.headers[HttpHeaders.CacheControl])
+    }
+
+    @Test
+    fun testGetEncounterResponseHasNoCacheHeader() = testApplication {
+        setup()
+        val token = getToken()
+        val encounterId = createEncounter(token, provider1Body)
+        val response = client.get("/encounters/$encounterId") {
+            header("Authorization", "Bearer $token")
+        }
+        assertEquals("no-store", response.headers[HttpHeaders.CacheControl])
+    }
+
+    @Test
+    fun testListEncountersResponseHasNoCacheHeader() = testApplication {
+        setup()
+        val token = getToken()
+        val response = client.get("/encounters") {
+            header("Authorization", "Bearer $token")
+        }
+        assertEquals("no-store", response.headers[HttpHeaders.CacheControl])
+    }
 }

@@ -17,6 +17,7 @@ fun Route.encounterRoutes(service: EncounterService) {
             val request = call.receive<CreateEncounterRequest>()
             val ip = call.request.local.remoteAddress
             val encounter = service.createEncounter(request, caller, ip)
+            call.response.header(HttpHeaders.CacheControl, "no-store")
             call.respond(HttpStatusCode.Created, encounter)
         }
 
@@ -25,6 +26,7 @@ fun Route.encounterRoutes(service: EncounterService) {
             val id = call.parameters["id"]!!
             val ip = call.request.local.remoteAddress
             val encounter = service.getEncounter(id, caller, ip)
+            call.response.header(HttpHeaders.CacheControl, "no-store")
             call.respond(encounter)
         }
 
@@ -36,6 +38,7 @@ fun Route.encounterRoutes(service: EncounterService) {
             val providerId = call.request.queryParameters["providerId"]
             val patientId = call.request.queryParameters["patientId"]
             val encounters = service.listEncounters(fromDate, toDate, providerId, patientId, caller, ip)
+            call.response.header(HttpHeaders.CacheControl, "no-store")
             call.respond(encounters)
         }
     }

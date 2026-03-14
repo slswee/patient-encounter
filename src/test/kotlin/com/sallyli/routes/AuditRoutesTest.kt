@@ -115,4 +115,16 @@ class AuditRoutesTest : BaseRouteTest() {
         assertEquals(encounterId, readEntry["encounterId"]!!.jsonPrimitive.content)
         assertEquals("provider-001", readEntry["accessedBy"]!!.jsonPrimitive.content)
     }
+
+    // ── Cache-Control header ──────────────────────────────────────────────────
+
+    @Test
+    fun testAuditResponseHasNoCacheHeader() = testApplication {
+        setup()
+        val token = getAdminToken()
+        val response = client.get("/audit/encounters") {
+            header("Authorization", "Bearer $token")
+        }
+        assertEquals("no-store", response.headers[HttpHeaders.CacheControl])
+    }
 }

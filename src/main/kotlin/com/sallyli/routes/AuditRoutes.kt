@@ -1,6 +1,7 @@
 package com.sallyli.routes
 
 import com.sallyli.service.EncounterService
+import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -13,6 +14,7 @@ fun Route.auditRoutes(service: EncounterService) {
             val fromDate = call.request.queryParameters["fromDate"]
             val toDate = call.request.queryParameters["toDate"]
             val logs = service.getAuditLogs(fromDate, toDate, caller)
+            call.response.header(HttpHeaders.CacheControl, "no-store")
             call.respond(logs)
         }
     }

@@ -80,9 +80,15 @@ The `redact()` method on `PhiRedactingConverter` is public so `PhiRedactingThrow
 `AuditLog` entries are written for:
 - `CREATE` — on `createEncounter`, includes `encounterId`, `accessedBy`, `ipAddress`
 - `READ` — on `getEncounter`, same fields
+- `LIST` — one entry per encounter returned by `listEncounters` (zero entries if result is empty)
+- `REVOKE` — on `POST /oauth/revoke`, includes `accessedBy`, `ipAddress`
 - `AUTH_FAILURE` — on any auth failure, includes `reason` (`NO_CREDENTIALS` / `INVALID_TOKEN` / `INVALID_CLIENT`), `accessedBy` (attempted identity where determinable), `ipAddress`
 
 For `INVALID_TOKEN`, the claimed subject is extracted from the unverified JWT for logging — it is not trusted for access control.
+
+### Cache-Control
+
+All PHI-containing responses (`POST /encounters`, `GET /encounters`, `GET /encounters/{id}`, `GET /audit/encounters`) include `Cache-Control: no-store` to prevent browsers and reverse proxies from caching patient data.
 
 ## API
 
@@ -102,22 +108,22 @@ Error shape: `{ "message": "...", "details": ["..."] }`
 
 ## Test Coverage
 
-58 tests across 7 files. Regenerate with `./gradlew test jacocoTestReport`; HTML report at `build/reports/jacoco/test/html/index.html`.
+95 tests across 10 files. Regenerate with `./gradlew test jacocoTestReport`; HTML report at `build/reports/jacoco/test/html/index.html`.
 
-**Overall: 329/337 lines (98%) · 94/112 methods (84%) · 1892/2016 instructions (94%)**
+**Overall: 371/379 lines (98%) · 99/116 methods (85%)**
 
 Per-package breakdown (JaCoCo aggregates all tests together):
 
 | Source package | Lines | Methods | Test file(s) |
 |---|---|---|---|
-| `routes` | 81/81 (100%) | 15/18 (83%) | `AuthRoutesTest` (13), `EncounterRoutesTest` (11) |
-| `service` | 47/47 (100%) | 7/7 (100%) | `EncounterServiceTest` (13) |
-| `security` | 78/78 (100%) | 19/21 (90%) | `PhiRedactorTest` (5), `PhiRedactingThrowableConverterTest` (4), `TokenDenylistTest` (5) |
-| `repository` | 25/26 (96%) | 9/11 (82%) | `EncounterRepositoryTest` (7) |
+| `routes` | 95/95 (100%) | 15/18 (83%) | `AuthRoutesTest` (15), `EncounterRoutesTest` (18), `AuditRoutesTest` (8) |
+| `service` | 60/60 (100%) | 7/7 (100%) | `EncounterServiceTest` (19) |
+| `security` | 78/78 (100%) | 19/21 (90%) | `PhiRedactorTest` (5), `PhiRedactingThrowableConverterTest` (4), `PhiRedactionLogIntegrationTest` (4), `TokenDenylistTest` (5) |
+| `repository` | 40/41 (98%) | 13/15 (87%) | `EncounterRepositoryTest` (10), `AuditRepositoryTest` (7) |
 | `plugins` | 14/17 (82%) | 5/6 (83%) | via route integration tests |
-| `model` | 40/40 (100%) | 30/39 (77%) | via all tests |
+| `model` | 40/40 (100%) | 31/39 (79%) | via all tests |
 | `com.sallyli` (root) | 44/48 (92%) | 9/10 (90%) | via route integration tests |
 
 Route tests use `testApplication { setup() }` (full Ktor stack). Unit tests instantiate classes directly — no HTTP overhead, faster failure attribution.
 
-`BaseRouteTest` holds shared `setup()`, `getToken()`, `getAdminToken()`, and `createEncounter()` helpers used by both route test classes.
+`BaseRouteTest` holds shared `setup()`, `getToken()`, `getAdminToken()`, and `createEncounter()` helpers used by all route test classes.
