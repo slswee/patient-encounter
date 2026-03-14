@@ -2,14 +2,11 @@
 
 This project was created using the [Ktor Project Generator](https://start.ktor.io).
 
-Here are some useful links to get you started:
-
 - [Ktor Documentation](https://ktor.io/docs/home.html)
 - [Ktor GitHub page](https://github.com/ktorio/ktor)
 
 ## ktor Features used in this project
 
-Here's a list of features included in this project:
 
 | Name                                                                   | Description                                                                        |
 | ------------------------------------------------------------------------|------------------------------------------------------------------------------------ |
@@ -39,9 +36,11 @@ If the server starts successfully, you'll see the following output:
 ```
 
 ## API Authentication
+
 - Used a short-lived token (900s expiry time).  a client proves identity with a pre-shared secret, receives a short-lived JWT, and uses that JWT on every subsequent request during the 900s valid timeframe.
 - If a token is stolen, it can be added to a denyList and gets revoked. The denyList is stored in an in-memory ConcurrentHashMap.
 - Ktor has a built-in JWT provider that handles signature verification and expiry checking automatically.
+- Please check Claude.md for a detailed implementation description.
 
 ### How a client calls the API
 Step 1 — Get a token
@@ -100,7 +99,9 @@ In production, we can use Redis to store the denyList (key TTLs, and all instanc
 `patientId` is PHI under HIPAA. 
 
 I extended the Logback converter to make two custom Logback converters, which are registered in `logback.xml`.
+
 `PhiRedactingConverter` intercepts the message in `RequestValidationException`, `NotFoundException`, `ForbiddenException`, and a catch-call `Throwable`.
+
 `PhiRedactingThrowableConverter` intercepts and redacts the exception/stack trace output. 
 
 **What this covers**
@@ -112,7 +113,6 @@ I extended the Logback converter to make two custom Logback converters, which ar
 **What it doesn't cover**
 - `clinicalData` is a free-from JsonObject that can contain anything and it's currently not covered by any redaction pattern.
 
-
 ### Provider-level authorization 
 
 * Only an admin can call GET /encounters on all patient encounters
@@ -123,9 +123,9 @@ I extended the Logback converter to make two custom Logback converters, which ar
   * There is no rate limiting, lockout, or throttling on the token endpoint. An attacker can brute-force client_secret values at full server speed. Each failed attempt does write an `INVALID_CLIENT` audit entry, but nothing stops the attempts or alerts on volume.
   * In production, add rate limiting at API Gateway on `client_id` or source IP.
 - Data storage needs to be in persistent database 
-  * Postgres is a great choice, because it offers encryption for patient data and point-in-time recovery for audit logs. 
+  * PostgreSQL is a great choice, because it offers encryption for patient data and point-in-time recovery for audit logs. 
   * The repository interfaces (EncounterRepository, AuditRepository) are abstracted — we can swap to a PostgreSQl implementation without touching service or route code. 
-  * Token denylist is also stored in in-memory ConcurrentHashMap, so it resets on every restart. In production it should be stored in Redis (with key TTLs, so entries automatically expire, no additional cleanup needed)
+  * Token denylist is also stored in in-memory ConcurrentHashMap, so it resets on every restart. In production, it should be stored in Redis (with key TTLs, so entries automatically expire, no additional cleanup needed)
 - TLS enforcement.
   * Currently, there is no TLS configuration, no redirect from HTTP to HTTPS, and no Strict-Transport-Security header on responses. The server runs on plain HTTP. Every token, every JWT, and every piece of PHI in request/response bodies is transmitted in cleartext.
   In production, terminate TLS at a load balancer or reverse proxy (nginx, AWS ALB). The application should also reject non-HTTPS requests or redirect them.
