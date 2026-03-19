@@ -133,4 +133,7 @@ I extended the Logback converter to make two custom Logback converters, which ar
   * Issue: Answering a patient's HIPAA Accounting of Disclosures request ("who accessed my records?") requires joining the audit log against the encounter store. If the encounter store is ever cleared or migrated, those audit entries become unresolvable.
   * I would need to research on the domain subject (HIPAA) and then come up with a tech approach to handle this. For the purpose of the take home assignment I skipped this part.
 - Add redaction for `clinicalData`. I'd research how to do redaction using structural pattern. Regex pattern is good enough for `patientId` but is insufficient for `clinicalData`. 
-
+## Edited 3/19/2026
+- Add key rotation for API authentication
+- patient name, DOB, SSN redaction
+- Add monitoring and metrics ktor plugin for to check service health
